@@ -27,8 +27,10 @@ evidence/
 # ML weights and media datasets
 *.pt
 *.mp4
+!car_accidents/*.mp4
 
 # Editor and OS files
 .vscode/
 .DS_Store
 Thumbs.db
+mongodb/

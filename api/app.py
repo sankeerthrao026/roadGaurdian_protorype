@@ -44,13 +44,28 @@ def initialise_footage_store():
     """Create the metadata & incidents tables when PostgreSQL is configured."""
     footage_store.init()
 
+raw_frontend_url = os.getenv("FRONTEND_URL", "")
+allowed_origins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://127.0.0.1:5173",
+]
+if raw_frontend_url:
+    for url in raw_frontend_url.split(","):
+        cleaned = url.strip()
+        if cleaned and cleaned not in allowed_origins:
+            allowed_origins.append(cleaned)
+else:
+    allowed_origins.append("*")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 
 class CameraSelectPayload(BaseModel):
