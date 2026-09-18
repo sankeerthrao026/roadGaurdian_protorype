@@ -10,31 +10,58 @@ interface CameraViewProps {
   onControlAction: (action: 'play' | 'pause' | 'restart') => void;
 }
 
-// Video is memoized on activeCameraId only — telemetry changes do NOT
+// Video is memoized on streamUrl and cameraId — telemetry changes do NOT
 // cause the <img> element to re-mount or reconnect the MJPEG stream.
 const MJPEGStream = memo(
   ({ streamUrl, cameraId }: { streamUrl: string; cameraId: string }) => {
     const imgRef = useRef<HTMLImageElement>(null);
+    const [streamSrc, setStreamSrc] = useState(streamUrl);
+    const [hasError, setHasError] = useState(false);
+    const retryTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     useEffect(() => {
-      if (imgRef.current) {
-        imgRef.current.src = streamUrl;
-      }
+      setStreamSrc(streamUrl);
+      setHasError(false);
+      return () => {
+        if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
+      };
     }, [streamUrl]);
 
+    const handleError = () => {
+      setHasError(true);
+      if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
+      // Auto-retry reconnecting after 1.5 seconds with timestamp
+      retryTimeoutRef.current = setTimeout(() => {
+        setStreamSrc(`${streamUrl}${streamUrl.includes('?') ? '&' : '?'}t=${Date.now()}`);
+        setHasError(false);
+      }, 1500);
+    };
+
+    const handleLoad = () => {
+      setHasError(false);
+    };
+
     return (
-      <img
-        ref={imgRef}
-        src={streamUrl}
-        alt={`CCTV Stream ${cameraId}`}
-        className="w-full h-full object-contain"
-        onError={() => {
-          /* stream temporarily unavailable — img stays blank, will retry on reconnect */
-        }}
-      />
+      <div className="relative w-full h-full flex items-center justify-center">
+        {hasError && (
+          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-[#090A0C]/90 text-[#C98255] font-mono text-xs gap-2 p-4 text-center">
+            <span className="w-3 h-3 rounded-full bg-[#C98255] animate-ping" />
+            <p className="font-bold">CONNECTING TO LIVE CCTV FEED ({cameraId})...</p>
+            <p className="text-[#798690] text-[10px]">Initializing video pipeline and YOLOv8 inference...</p>
+          </div>
+        )}
+        <img
+          ref={imgRef}
+          src={streamSrc}
+          alt={`CCTV Stream ${cameraId}`}
+          className={`w-full h-full object-contain ${hasError ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
+          onLoad={handleLoad}
+          onError={handleError}
+        />
+      </div>
     );
   },
-  (prev, next) => prev.streamUrl === next.streamUrl // only re-render if stream URL changes
+  (prev, next) => prev.streamUrl === next.streamUrl && prev.cameraId === next.cameraId
 );
 
 export const CameraView: React.FC<CameraViewProps> = ({

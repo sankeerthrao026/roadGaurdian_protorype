@@ -184,16 +184,43 @@ def stream_video(camera_id: str):
 @app.get("/api/incidents")
 def list_incidents():
     incidents = global_incident_store.get_all_active_sorted()
-    if not incidents:
-        # Check PostgreSQL persistent incident store
-        pg_incidents = footage_store.list_saved_incidents()
-        if pg_incidents:
-            return pg_incidents
-        # Fallback to active camera worker final_result if available
-        worker = global_camera_manager.get_active_worker()
-        if worker and worker.final_result:
+    if incidents:
+        return incidents
+
+    # Check PostgreSQL persistent incident store
+    pg_incidents = footage_store.list_saved_incidents()
+    if pg_incidents:
+        return pg_incidents
+
+    # Fallback to active camera worker final_result or live candidate during playback
+    worker = global_camera_manager.get_active_worker()
+    if worker:
+        if worker.final_result:
             return [worker.final_result]
-    return incidents
+        # While analyzing, return live candidate so Priority Queue shows real-time tracking
+        _, meta = worker.get_frame_and_meta()
+        clean_cam = worker.camera_id.replace("-", "").replace("_", "")
+        num_v = meta.get("num_vehicles", 0)
+        num_p = meta.get("num_persons", 0)
+        return [{
+            "incident_id": f"{clean_cam}_LIVE",
+            "camera_id": worker.camera_id,
+            "type": "MONITORING",
+            "location": {"road_name": worker.road_name, "name": worker.road_name},
+            "timestamp": meta.get("time_str", "LIVE"),
+            "features": {
+                "vehicle_count": num_v,
+                "person_on_road": num_p > 0,
+                "fire_smoke": False,
+                "rollover": False,
+                "traffic_impact": "evaluating"
+            },
+            "severity_score": 45 if num_v > 1 else 25,
+            "severity_label": "Medium" if num_v > 1 else "Low",
+            "priority_rank": 1,
+            "status": "ANALYZING"
+        }]
+    return []
 
 @app.get("/api/incidents/{incident_id}")
 def get_incident(incident_id: str):
@@ -204,6 +231,26 @@ def get_incident(incident_id: str):
         worker = global_camera_manager.get_active_worker()
         if worker and worker.final_result and worker.final_result.get("incident_id") == incident_id:
             inc = worker.final_result
+        elif worker:
+            # Fallback for live candidate
+            _, meta = worker.get_frame_and_meta()
+            inc = {
+                "incident_id": incident_id,
+                "camera_id": worker.camera_id,
+                "type": "MONITORING",
+                "location": {"road_name": worker.road_name, "name": worker.road_name},
+                "timestamp": meta.get("time_str", "LIVE"),
+                "features": {
+                    "vehicle_count": meta.get("num_vehicles", 0),
+                    "person_on_road": meta.get("num_persons", 0) > 0,
+                    "fire_smoke": False,
+                    "rollover": False,
+                    "traffic_impact": "evaluating"
+                },
+                "severity_score": 45,
+                "severity_label": "Medium",
+                "priority_rank": 1
+            }
         else:
             raise HTTPException(status_code=404, detail="Incident not found")
     
@@ -240,13 +287,9 @@ class FootageSelectPayload(BaseModel):
 @app.get("/api/footage")
 def list_footage():
     """
-    Return PostgreSQL-backed footage metadata for the existing selector.
-    Storage keys are deliberately not returned to the browser.
+    Return PostgreSQL-backed or local video metadata for the selector.
     """
-    try:
-        records = footage_store.list_footage()
-    except FootageStoreUnavailable as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    records = footage_store.list_footage()
     return {"footage": [
         {"id": record["id"], "filename": record["filename"],
          "display_name": record["display_name"], "size_mb": float(record["size_mb"] or 0)}
@@ -256,13 +299,9 @@ def list_footage():
 @app.post("/api/footage/select")
 def select_footage(payload: FootageSelectPayload):
     """
-    Resolve a selected PostgreSQL record through the configured storage backend,
-    then hand its local path to the existing CameraWorker unchanged.
+    Resolve selected footage and swap on active CameraWorker.
     """
-    try:
-        footage = footage_store.get_footage_by_id(payload.footage_id)
-    except FootageStoreUnavailable as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    footage = footage_store.get_footage_by_id(payload.footage_id)
     if footage is None:
         raise HTTPException(status_code=404, detail="Footage record not found.")
 
@@ -271,7 +310,6 @@ def select_footage(payload: FootageSelectPayload):
     except (EnvironmentError, FileNotFoundError, RuntimeError, ValueError) as exc:
         raise HTTPException(status_code=502, detail=f"Could not retrieve footage from storage: {exc}") from exc
 
-    # Swap on the active camera worker (reuses existing swap_active_footage)
     ok = global_camera_manager.swap_active_footage(resolved)
     if not ok:
         raise HTTPException(status_code=500, detail="No active camera worker to swap footage on.")
@@ -297,10 +335,40 @@ def copilot_query(payload: CopilotQueryPayload):
     if final_res:
         rag_context = global_rag_store.get_similar_incidents_text(final_res, top_k=2)
 
+    # Check for Gemini API Key
+    gemini_key = os.getenv("GEMINI_API_KEY", "")
+    if gemini_key:
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=gemini_key)
+            model = genai.GenerativeModel("gemini-1.5-flash")
+            prompt = f"""You are RoadGuardian AI Copilot, an intelligent traffic safety & emergency dispatch assistant.
+System Telemetry:
+- Camera: {final_res.get('camera_id', 'CAM-01') if final_res else 'CAM-01'}
+- Road: {worker.road_name if worker else 'Corridor'}
+- Status: {final_res.get('type', 'MONITORING') if final_res else 'Analyzing CCTV Feed'}
+- Severity: {final_res.get('severity_score', 'N/A') if final_res else 'Evaluating'}/100 ({final_res.get('severity_label', 'Medium') if final_res else 'Evaluating'})
+- SHAP Drivers: {final_res.get('shap_values', {}) if final_res else {}}
+- Historical RAG Context: {rag_context}
+- Active Dispatches: {global_incident_store.get_dispatches()}
+
+User Question: {payload.question}
+
+Provide a concise, direct, helpful answer based on the real system telemetry above:"""
+            response = model.generate_content(prompt)
+            if response and response.text:
+                return {
+                    "question": payload.question,
+                    "answer": response.text.strip(),
+                    "rag_context": rag_context
+                }
+        except Exception as gemini_err:
+            print(f"[Copilot] Gemini API fallback: {gemini_err}")
+
     # Contextual Intelligence Answer Synthesis based on real system state
     if "priority" in question or "rank" in question:
         if final_res:
-            answer = f"Incident [{final_res.get('incident_id', 'INC-001')}] is ranked Priority #{final_res.get('priority_rank', 1)} because of a high ML severity score of {final_res.get('severity_score', 85)}/100 and multiple active hazard flags (Rollover: YES, Fire/Smoke: NO)."
+            answer = f"Incident [{final_res.get('incident_id', 'INC-001')}] is ranked Priority #{final_res.get('priority_rank', 1)} because of a high ML severity score of {final_res.get('severity_score', 85)}/100 and multiple active hazard flags."
         else:
             answer = "Currently analyzing CCTV video feed. Incident priority will be finalized upon video completion."
 
@@ -318,11 +386,11 @@ def copilot_query(payload: CopilotQueryPayload):
             ev = final_res["evidence"]
             timeline = ev.get("timeline", [])
             t_str = " -> ".join([f"{t['timestamp']} {t['event']}" for t in timeline[-3:]])
-            answer = f"Key evidence: {ev.get('summary', 'Vehicle rollover detected on Highway 101.')} Timeline: {t_str}"
+            answer = f"Key evidence: {ev.get('summary', 'Traffic incident detected.')} Timeline: {t_str}"
         else:
             answer = "Frame evidence is aggregated frame-by-frame using YOLOv8 bounding boxes and ByteTrack motion vectors."
 
-    elif "dispatch" in question or "response" in question or "police" in question:
+    elif "dispatch" in question or "response" in question or "police" in question or "ambulance" in question:
         dispatches = global_incident_store.get_dispatches()
         if dispatches:
             d_str = "; ".join([f"{d.get('service')}: {d.get('message')}" for d in dispatches])

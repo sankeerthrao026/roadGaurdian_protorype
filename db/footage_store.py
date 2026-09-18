@@ -101,48 +101,74 @@ def init():
 
 # ── Footage API ───────────────────────────────────────────────────────────────
 
+def _list_local_footage() -> List[Dict[str, Any]]:
+    """Fallback: Enumerate local video files from car_accidents directory."""
+    from config.settings import VIDEOS_DIR
+    supported = {".mp4", ".avi", ".mov", ".mkv"}
+    records = []
+    if VIDEOS_DIR.exists():
+        files = sorted([f for f in VIDEOS_DIR.iterdir() if f.is_file() and f.suffix.lower() in supported])
+        for idx, f in enumerate(files):
+            size_mb = round(f.stat().st_size / (1024 * 1024), 2)
+            records.append({
+                "id": idx + 1,
+                "filename": f.name,
+                "display_name": f.stem,
+                "storage_key": f"car_accidents/{f.name}",
+                "size_mb": size_mb
+            })
+    return records
+
+
 def list_footage() -> List[Dict[str, Any]]:
     """
-    Returns available footage metadata from PostgreSQL.
+    Returns available footage metadata from PostgreSQL, or local folder fallback.
     Each record: { id, filename, display_name, storage_key, size_mb }
     """
     conn = _get_conn()
-    if conn is None:
-        raise FootageStoreUnavailable("PostgreSQL is unavailable.")
-    try:
-        from psycopg2.extras import RealDictCursor
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute(
-            "SELECT id, filename, display_name, storage_key, size_mb "
-            "FROM cctv_footage ORDER BY display_name, id"
-        )
-        return [dict(r) for r in cur.fetchall()]
-    except Exception as exc:
-        logger.warning(f"[FootageStore] list_footage DB error: {exc}")
-        raise FootageStoreUnavailable("Could not load footage metadata from PostgreSQL.") from exc
+    if conn is not None:
+        try:
+            from psycopg2.extras import RealDictCursor
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            cur.execute(
+                "SELECT id, filename, display_name, storage_key, size_mb "
+                "FROM cctv_footage ORDER BY display_name, id"
+            )
+            rows = [dict(r) for r in cur.fetchall()]
+            if rows:
+                return rows
+        except Exception as exc:
+            logger.warning(f"[FootageStore] list_footage DB error: {exc}")
+
+    return _list_local_footage()
 
 
 def get_footage_by_id(footage_id: int) -> Optional[Dict[str, Any]]:
     """
-    Looks up a single footage record by its database ID.
+    Looks up a single footage record by its database ID or local fallback index.
     Returns: { id, filename, display_name, storage_key, size_mb } or None.
     """
     conn = _get_conn()
-    if conn is None:
-        raise FootageStoreUnavailable("PostgreSQL is unavailable.")
-    try:
-        from psycopg2.extras import RealDictCursor
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute(
-            "SELECT id, filename, display_name, storage_key, size_mb "
-            "FROM cctv_footage WHERE id = %s",
-            (footage_id,)
-        )
-        row = cur.fetchone()
-        return dict(row) if row else None
-    except Exception as exc:
-        logger.warning(f"[FootageStore] get_footage_by_id DB error: {exc}")
-        raise FootageStoreUnavailable("Could not load footage metadata from PostgreSQL.") from exc
+    if conn is not None:
+        try:
+            from psycopg2.extras import RealDictCursor
+            cur = conn.cursor(cursor_factory=RealDictCursor)
+            cur.execute(
+                "SELECT id, filename, display_name, storage_key, size_mb "
+                "FROM cctv_footage WHERE id = %s",
+                (footage_id,)
+            )
+            row = cur.fetchone()
+            if row:
+                return dict(row)
+        except Exception as exc:
+            logger.warning(f"[FootageStore] get_footage_by_id DB error: {exc}")
+
+    local_list = _list_local_footage()
+    for rec in local_list:
+        if rec["id"] == footage_id:
+            return rec
+    return None
 
 
 # ── Incident Persistence API ─────────────────────────────────────────────────

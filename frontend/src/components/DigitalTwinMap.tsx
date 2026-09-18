@@ -4,9 +4,21 @@ import { MapPin, Navigation, Radio } from 'lucide-react';
 interface DigitalTwinMapProps {
   cameraId: string;
   roadName: string;
+  location?: { lat?: number; lon?: number; name?: string } | null;
+  incidentLocation?: string | null;
 }
 
-export const DigitalTwinMap: React.FC<DigitalTwinMapProps> = ({ cameraId, roadName }) => {
+export const DigitalTwinMap: React.FC<DigitalTwinMapProps> = ({
+  cameraId,
+  roadName,
+  location,
+  incidentLocation,
+}) => {
+  const lat = location?.lat ?? 37.7749;
+  const lon = location?.lon ?? -122.4194;
+  const latStr = `${Math.abs(lat).toFixed(4)}° ${lat >= 0 ? 'N' : 'S'}`;
+  const lonStr = `${Math.abs(lon).toFixed(4)}° ${lon >= 0 ? 'E' : 'W'}`;
+
   return (
     <div className="bg-[#141517] border border-[#394047] rounded-md flex flex-col h-full">
       <div className="bg-[#1B1D20] border-b border-[#394047] px-4 py-2.5 flex justify-between items-center font-mono text-xs font-bold text-[#C98255] uppercase">
@@ -29,19 +41,23 @@ export const DigitalTwinMap: React.FC<DigitalTwinMapProps> = ({ cameraId, roadNa
             </div>
           </div>
           <span className="text-[10px] bg-[#1B1D20] border border-[#394047] px-2 py-1 rounded text-[#D4D9DF]">
-            GPS: 37.7749° N, 122.4194° W
+            GPS: {latStr}, {lonStr}
           </span>
         </div>
 
         {/* Tactical Simulated GIS Radar Display */}
         <div className="relative bg-[#090A0C] border border-[#394047] rounded h-32 flex items-center justify-center overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(#394047_1px,transparent_1px)] [background-size:16px_16px] opacity-30" />
-          <div className="w-20 h-20 rounded-full border border-[#394047] flex items-center justify-center relative">
-            <div className="w-10 h-10 rounded-full border border-[#C98255]/40 animate-ping" />
-            <div className="w-2 h-2 rounded-full bg-[#C98255] absolute" />
+          <div className="w-24 h-24 rounded-full border border-[#394047] flex items-center justify-center relative">
+            <div className="w-14 h-14 rounded-full border border-[#C98255]/40 animate-ping" />
+            <div className="w-2.5 h-2.5 rounded-full bg-[#C98255] absolute shadow-[0_0_8px_#C98255]" />
+          </div>
+          <div className="absolute top-2 left-3 text-[10px] text-[#55C98A] flex items-center gap-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#55C98A]" />
+            NODE: {location?.name || roadName}
           </div>
           <div className="absolute bottom-2 left-3 text-[10px] text-[#798690]">
-            CORRIDOR SENSORS ACTIVE
+            CORRIDOR SENSORS ACTIVE {incidentLocation ? `• TARGET: ${incidentLocation}` : ''}
           </div>
         </div>
       </div>

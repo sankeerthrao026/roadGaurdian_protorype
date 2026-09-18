@@ -230,6 +230,8 @@ export const App: React.FC = () => {
           <DigitalTwinMap
             cameraId={activeCameraId}
             roadName={telemetry?.road_name ?? 'Highway Corridor'}
+            location={telemetry?.location}
+            incidentLocation={displayIncident?.location?.road_name}
           />
 
           <CopilotChat incidentId={displayIncident?.incident_id} />

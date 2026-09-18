@@ -26,8 +26,17 @@ def start_all():
     print()
 
     # 1. FastAPI backend
+    venv_py_win = BASE_DIR / ".venv" / "Scripts" / "python.exe"
+    venv_py_unix = BASE_DIR / ".venv" / "bin" / "python"
+    if os.name == "nt" and venv_py_win.exists():
+        py_exec = str(venv_py_win)
+    elif venv_py_unix.exists():
+        py_exec = str(venv_py_unix)
+    else:
+        py_exec = sys.executable
+
     api_cmd = [
-        sys.executable, "-m", "uvicorn",
+        py_exec, "-m", "uvicorn",
         "api.app:app",
         "--host", "0.0.0.0",
         "--port", "8000",

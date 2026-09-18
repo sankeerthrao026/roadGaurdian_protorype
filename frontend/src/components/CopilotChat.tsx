@@ -100,6 +100,27 @@ export const CopilotChat: React.FC<CopilotChatProps> = ({ incidentId }) => {
         )}
       </div>
 
+      {/* Quick Prompts */}
+      <div className="px-3 pt-2 pb-1 bg-[#141517] flex flex-wrap gap-1.5 border-t border-[#394047]/50">
+        {[
+          "What is the severity score?",
+          "Explain SHAP attribution",
+          "What emergency units are dispatched?",
+          "Any similar historical collisions?"
+        ].map((prompt, idx) => (
+          <button
+            key={idx}
+            type="button"
+            onClick={() => {
+              setInput(prompt);
+            }}
+            className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#0D0E10] border border-[#394047] text-[#999EA5] hover:border-[#C98255] hover:text-[#C98255] transition cursor-pointer"
+          >
+            {prompt}
+          </button>
+        ))}
+      </div>
+
       {/* Input Form */}
       <form onSubmit={handleSend} className="p-3 bg-[#141517] border-t border-[#394047] flex gap-2">
         <input

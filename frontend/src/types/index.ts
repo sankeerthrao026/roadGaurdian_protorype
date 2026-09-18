@@ -20,6 +20,7 @@ export interface Telemetry {
   processing_state: "ANALYZING" | "FINAL_ANALYSIS" | "COMPLETE";
   camera_id: string;
   road_name: string;
+  location?: { lat?: number; lon?: number; name?: string };
   frame_idx: number;
   total_frames: number;
   progress_pct: number;
