@@ -39,9 +39,12 @@ Implemented in `AuthorityAlertBanner.tsx`:
 
 ### Alert Sound
 Implemented in `frontend/src/utils/sound.ts`:
-- Web Audio API dual-tone synthesized emergency chime (Tone 1: 880 Hz / Tone 2: 1174.66 Hz).
-- Self-contained synthesizer with zero external asset dependencies.
-- Audio context automatically unlocked on first user interaction gesture.
+- **Type:** Synthesized emergency buzzer / warning alarm using HTML5 Web Audio API.
+- **Character:** Sustained siren-like warning tone with rising/falling frequency (460 Hz ↔ 760 Hz) and multi-oscillator harmonic layering (Sawtooth + Square + Triangle).
+- **Duration:** ~1.25 seconds (2 continuous warning sweep cycles).
+- **No Beeps:** Continuous frequency modulation with zero stuttering or rapid on/off beeping.
+- **Deduplication:** Guarded by `playedAlertIds` on frontend and unique `alert_id` on backend (ONE INCIDENT = ONE ALERT = ONE SOUND).
+- **Audio Unlock:** Audio context automatically unlocked on initial user gesture (`pointerdown`, `keydown`, or PLAY button).
 
 ### Deduplication
 - Single-event tracking: **ONE INCIDENT = ONE ALERT = ONE SOUND**.
