@@ -44,16 +44,43 @@ def _resolve_local(storage_key: str) -> str:
     candidate = Path(storage_key)
 
     if candidate.is_absolute() and candidate.exists():
-        return str(candidate)
+        return str(candidate.resolve())
 
     from config.settings import BASE_DIR, VIDEOS_DIR
+    
+    # Candidate search roots
+    search_dirs = [
+        VIDEOS_DIR,
+        BASE_DIR / "car_accidents",
+        BASE_DIR.parent / "car_accidents",
+        Path.cwd() / "car_accidents",
+        BASE_DIR,
+    ]
+
+    # 1. Direct relative check
     rel_to_base = BASE_DIR / storage_key
-    if rel_to_base.exists():
+    if rel_to_base.exists() and rel_to_base.is_file():
         return str(rel_to_base.resolve())
 
-    filename_only = VIDEOS_DIR / candidate.name
-    if filename_only.exists():
-        return str(filename_only.resolve())
+    # 2. Check candidate name in search dirs
+    filename = candidate.name
+    variations = [
+        filename,
+        filename.replace(" ", "_"),
+        filename.replace("_", " "),
+    ]
+
+    for sdir in search_dirs:
+        if not sdir.exists():
+            continue
+        for var in variations:
+            target = sdir / var
+            if target.exists() and target.is_file():
+                return str(target.resolve())
+        # Fuzzy case-insensitive check
+        for f in sdir.iterdir():
+            if f.is_file() and f.name.lower() in [v.lower() for v in variations]:
+                return str(f.resolve())
 
     raise FileNotFoundError(
         f"[StorageBackend] LOCAL: could not find '{storage_key}' "

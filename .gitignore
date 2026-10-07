@@ -29,8 +29,16 @@ evidence/
 *.mp4
 !car_accidents/*.mp4
 
+# Temporary test/debug image dumps
+*.jpg
+*.jpeg
+*.png
+!frontend/src/assets/*
+!frontend/public/*
+
 # Editor and OS files
 .vscode/
 .DS_Store
 Thumbs.db
 mongodb/
+

@@ -47,6 +47,7 @@ class CameraWorker:
 
         # State and Telemetry
         self.lock = threading.Lock()
+        self.cap_lock = threading.Lock()
         self.status = "PAUSED"  # "PLAYING", "PAUSED", "ENDED", "ERROR"
         self.processing_state = "ANALYZING"  # "ANALYZING" | "FINAL_ANALYSIS" | "COMPLETE"
         self.is_running = False
@@ -75,19 +76,24 @@ class CameraWorker:
         self._init_capture()
 
     def _init_capture(self) -> bool:
-        if self.cap:
-            self.cap.release()
+        with self.cap_lock:
+            if self.cap:
+                try:
+                    self.cap.release()
+                except Exception:
+                    pass
+                self.cap = None
 
-        self.cap = cv2.VideoCapture(self.video_path)
-        if not self.cap or not self.cap.isOpened():
-            print(f"[CameraWorker:{self.camera_id}] Error opening: {self.video_path}")
-            self.status = "ERROR"
-            return False
+            self.cap = cv2.VideoCapture(self.video_path)
+            if not self.cap or not self.cap.isOpened():
+                print(f"[CameraWorker:{self.camera_id}] Error opening: {self.video_path}")
+                self.status = "ERROR"
+                return False
 
-        self.native_fps = self.cap.get(cv2.CAP_PROP_FPS) or 30.0
-        self.total_frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT) or 180)
+            self.native_fps = self.cap.get(cv2.CAP_PROP_FPS) or 30.0
+            self.total_frames = int(self.cap.get(cv2.CAP_PROP_FRAME_COUNT) or 180)
 
-        ret, frame = self.cap.read()
+            ret, frame = self.cap.read()
         if ret and frame is not None:
             frame = cv2.resize(frame, (FRAME_WIDTH, FRAME_HEIGHT))
             self.latest_raw_frame = frame
@@ -103,7 +109,8 @@ class CameraWorker:
             )
             self.current_frame_idx = 1
 
-        self.status = "PAUSED"
+        if not hasattr(self, "status") or self.status not in ("PLAYING", "PAUSED", "ENDED"):
+            self.status = "PLAYING"
         return True
 
     def start(self):
@@ -128,8 +135,6 @@ class CameraWorker:
 
     def restart(self):
         with self.lock:
-            if self.cap:
-                self.cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
             self.current_frame_idx = 0
             self.frames_processed = 0
             self.frames_skipped = 0
@@ -145,6 +150,10 @@ class CameraWorker:
             self.status = "PLAYING"
             import gc
             gc.collect()
+
+        self._init_capture()
+        with self.lock:
+            self.status = "PLAYING"
 
     def swap_footage(self, new_video_path: str) -> bool:
         """
@@ -170,14 +179,16 @@ class CameraWorker:
             self.processing_state = "ANALYZING"
             self.processing_start_time = time.time()
             self.total_processing_duration = 0.0
-            self.status = "PAUSED"
+            self.status = "PLAYING"
 
             import gc
             gc.collect()
 
         ok = self._init_capture()
         if ok:
-            print(f"[CameraWorker:{self.camera_id}] Footage swapped -> {new_video_path}")
+            with self.lock:
+                self.status = "PLAYING"
+            print(f"[CameraWorker:{self.camera_id}] Footage swapped and playing -> {new_video_path}")
         return ok
 
     def stop(self):
@@ -276,21 +287,46 @@ class CameraWorker:
 
             frame_start = time.time()
 
-            if not self.cap or not self.cap.isOpened():
-                if not self._init_capture():
-                    self.status = "ERROR"
-                    time.sleep(0.5)
-                    continue
+            try:
+                with self.cap_lock:
+                    if not self.cap or not self.cap.isOpened():
+                        opened = False
+                    else:
+                        ret, frame = self.cap.read()
+                        opened = True
 
-            ret, frame = self.cap.read()
-            if not ret or frame is None:
-                # Video has finished playing all frames
-                with self.lock:
-                    self.status = "ENDED"
-                if not self._final_analysis_executed:
-                    self._execute_final_analysis()
+                if not opened:
+                    if not self._init_capture():
+                        self.status = "ERROR"
+                        time.sleep(0.5)
+                        continue
+                    with self.cap_lock:
+                        ret, frame = self.cap.read() if self.cap and self.cap.isOpened() else (False, None)
+            except Exception as cap_err:
+                print(f"[CameraWorker:{self.camera_id}] Capture read exception (recovering): {cap_err}")
                 time.sleep(0.05)
                 continue
+
+            if not ret or frame is None:
+                # Video has finished playing all frames
+                if not self._final_analysis_executed:
+                    self._execute_final_analysis()
+                # Continuous seamless loop for live monitoring
+                if not self._init_capture():
+                    with self.lock:
+                        self.status = "ENDED"
+                    time.sleep(0.5)
+                    continue
+                try:
+                    with self.cap_lock:
+                        ret, frame = self.cap.read() if self.cap and self.cap.isOpened() else (False, None)
+                except Exception:
+                    ret, frame = False, None
+                if not ret or frame is None:
+                    with self.lock:
+                        self.status = "ENDED"
+                    time.sleep(0.5)
+                    continue
 
             self.current_frame_idx += 1
             frame = cv2.resize(frame, (FRAME_WIDTH, FRAME_HEIGHT))
@@ -325,7 +361,7 @@ class CameraWorker:
                 self.frames_skipped += 1
                 cached_detections = self.tracker.interpolate_skipped_frame(frame, camera_id=self.camera_id)
 
-            # Render HUD and Trajectories
+            # Render HUD and Trajectories directly onto real frame
             annotated = VideoAnnotator.annotate_frame(
                 frame=frame,
                 camera_id=self.camera_id,
@@ -394,8 +430,7 @@ class CameraWorker:
             }
 
             if frame is not None:
-                rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-                return rgb_frame, meta
+                return frame, meta
             return None, meta
 
 

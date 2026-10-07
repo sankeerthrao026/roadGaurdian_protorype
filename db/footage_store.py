@@ -85,8 +85,19 @@ CREATE TABLE IF NOT EXISTS incidents (
 );
 """
 
+def _get_videos_dirs() -> List[Path]:
+    from config.settings import BASE_DIR, VIDEOS_DIR
+    dirs = [
+        VIDEOS_DIR,
+        BASE_DIR / "car_accidents",
+        BASE_DIR.parent / "car_accidents",
+        Path.cwd() / "car_accidents",
+    ]
+    return [d for d in dirs if d.exists() and d.is_dir()]
+
+
 def init():
-    """Call once at application startup to create tables if they do not exist."""
+    """Call once at application startup to create tables and seed if empty."""
     conn = _get_conn()
     if conn is None:
         return
@@ -94,24 +105,41 @@ def init():
         cur = conn.cursor()
         cur.execute(_FOOTAGE_DDL)
         cur.execute(_INCIDENTS_DDL)
+        
+        # Check if table is empty and seed
+        cur.execute("SELECT COUNT(*) FROM cctv_footage")
+        count = cur.fetchone()[0]
+        if count == 0:
+            local_records = _list_local_footage()
+            for rec in local_records:
+                cur.execute("""
+                    INSERT INTO cctv_footage (filename, display_name, storage_key, size_mb)
+                    VALUES (%s, %s, %s, %s)
+                    ON CONFLICT (filename) DO NOTHING;
+                """, (rec["filename"], rec["display_name"], rec["storage_key"], rec["size_mb"]))
+            logger.info(f"[FootageStore] Auto-seeded {len(local_records)} clips into cctv_footage.")
         logger.info("[FootageStore] PostgreSQL tables cctv_footage and incidents initialized.")
     except Exception as exc:
-        logger.warning(f"[FootageStore] Could not initialize DDL: {exc}")
+        logger.warning(f"[FootageStore] Could not initialize DDL / seed: {exc}")
 
 
 # ── Footage API ───────────────────────────────────────────────────────────────
 
 def _list_local_footage() -> List[Dict[str, Any]]:
     """Fallback: Enumerate local video files from car_accidents directory."""
-    from config.settings import VIDEOS_DIR
     supported = {".mp4", ".avi", ".mov", ".mkv"}
     records = []
-    if VIDEOS_DIR.exists():
-        files = sorted([f for f in VIDEOS_DIR.iterdir() if f.is_file() and f.suffix.lower() in supported])
-        for idx, f in enumerate(files):
+    seen_names = set()
+
+    for vdir in _get_videos_dirs():
+        files = sorted([f for f in vdir.iterdir() if f.is_file() and f.suffix.lower() in supported])
+        for f in files:
+            if f.name in seen_names:
+                continue
+            seen_names.add(f.name)
             size_mb = round(f.stat().st_size / (1024 * 1024), 2)
             records.append({
-                "id": idx + 1,
+                "id": len(records) + 1,
                 "filename": f.name,
                 "display_name": f.stem,
                 "storage_key": f"car_accidents/{f.name}",
@@ -143,31 +171,61 @@ def list_footage() -> List[Dict[str, Any]]:
     return _list_local_footage()
 
 
-def get_footage_by_id(footage_id: int) -> Optional[Dict[str, Any]]:
+def get_footage_by_id(footage_id: Any) -> Optional[Dict[str, Any]]:
     """
-    Looks up a single footage record by its database ID or local fallback index.
+    Looks up a single footage record by its database ID, local fallback index, or filename.
     Returns: { id, filename, display_name, storage_key, size_mb } or None.
     """
+    int_id = None
+    name_str = None
+
+    if isinstance(footage_id, int):
+        int_id = footage_id
+    elif isinstance(footage_id, str):
+        if footage_id.isdigit():
+            int_id = int(footage_id)
+        else:
+            name_str = footage_id
+
     conn = _get_conn()
     if conn is not None:
         try:
             from psycopg2.extras import RealDictCursor
             cur = conn.cursor(cursor_factory=RealDictCursor)
-            cur.execute(
-                "SELECT id, filename, display_name, storage_key, size_mb "
-                "FROM cctv_footage WHERE id = %s",
-                (footage_id,)
-            )
-            row = cur.fetchone()
-            if row:
-                return dict(row)
+            if int_id is not None:
+                cur.execute(
+                    "SELECT id, filename, display_name, storage_key, size_mb "
+                    "FROM cctv_footage WHERE id = %s",
+                    (int_id,)
+                )
+                row = cur.fetchone()
+                if row:
+                    return dict(row)
+            if name_str:
+                variations = [name_str, name_str.replace(" ", "_"), name_str.replace("_", " ")]
+                for var in variations:
+                    cur.execute(
+                        "SELECT id, filename, display_name, storage_key, size_mb "
+                        "FROM cctv_footage WHERE LOWER(filename) = LOWER(%s) OR LOWER(display_name) = LOWER(%s)",
+                        (var, Path(var).stem)
+                    )
+                    row = cur.fetchone()
+                    if row:
+                        return dict(row)
         except Exception as exc:
             logger.warning(f"[FootageStore] get_footage_by_id DB error: {exc}")
 
     local_list = _list_local_footage()
-    for rec in local_list:
-        if rec["id"] == footage_id:
-            return rec
+    if int_id is not None:
+        for rec in local_list:
+            if rec["id"] == int_id:
+                return rec
+    if name_str:
+        variations = [name_str.lower(), name_str.replace(" ", "_").lower(), name_str.replace("_", " ").lower()]
+        for rec in local_list:
+            if rec["filename"].lower() in variations or rec["display_name"].lower() in [Path(v).stem for v in variations]:
+                return rec
+
     return None
 
 

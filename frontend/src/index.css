@@ -1,14 +1,88 @@
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+@theme {
+  --font-serif: 'Cormorant Garamond', Georgia, serif;
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --color-editorial-black: #0A0A0A;
+  --color-editorial-charcoal: #1A1A1A;
+  --color-editorial-offwhite: #F7F6F2;
+  --color-editorial-white: #FFFFFF;
+  --color-editorial-gray: #8A8A8A;
+  --color-editorial-muted: #6E6E6E;
+  --color-editorial-border: #DCDAD5;
+  --color-editorial-dark-surface: #141517;
+  --color-editorial-dark-border: #2A2D32;
+}
+
+:root {
+  --bg-primary: #F7F6F2;
+  --bg-surface: #FFFFFF;
+  --bg-subtle: #F0EEE9;
+  --bg-muted: #E8E6E1;
+  --border-color: #DCDAD5;
+  --border-strong: #0A0A0A;
+  --text-primary: #0A0A0A;
+  --text-secondary: #2C2C2C;
+  --text-muted: #727272;
+  --text-faint: #9A9A9A;
+  --accent-emergency: #C93B2B;
+  --accent-warning: #B86B35;
+  --accent-success: #256E3B;
+  --accent-emergency-bg: #FCF1F0;
+  --accent-emergency-border: #F5C6CB;
+  --accent-warning-bg: #FDF7F2;
+  --accent-warning-border: #F2D9C8;
+  --accent-success-bg: #F2F8F4;
+  --accent-success-border: #C8E6D0;
+}
+
+[data-theme='dark'] {
+  --bg-primary: #0A0A0A;
+  --bg-surface: #141517;
+  --bg-subtle: #1A1C1F;
+  --bg-muted: #24272B;
+  --border-color: #282B30;
+  --border-strong: #E5E3DD;
+  --text-primary: #F7F6F2;
+  --text-secondary: #C8C8C4;
+  --text-muted: #8E9298;
+  --text-faint: #5C6066;
+  --accent-emergency: #E05345;
+  --accent-warning: #D98248;
+  --accent-success: #4EAD6B;
+  --accent-emergency-bg: #1A1212;
+  --accent-emergency-border: #4A1F1D;
+  --accent-warning-bg: #1A1510;
+  --accent-warning-border: #4A311D;
+  --accent-success-bg: #101A14;
+  --accent-success-border: #1D4A2B;
+}
 
 body {
   margin: 0;
-  background-color: #0D0E10;
-  color: #D4D9DF;
-  font-family: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-  background-image: 
-    linear-gradient(rgba(57, 64, 71, 0.12) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(57, 64, 71, 0.12) 1px, transparent 1px);
-  background-size: 32px 32px;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Editorial subtle scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
 }

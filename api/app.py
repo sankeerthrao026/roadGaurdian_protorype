@@ -105,6 +105,7 @@ def root():
             "/api/incidents/{id}/similar",
             "/api/models/comparison",
             "/api/dispatches",
+            "/api/alerts",
             "/api/copilot"
         ]
     }
@@ -156,6 +157,7 @@ def get_telemetry():
     active_incidents = global_incident_store.get_all_active_sorted()
     meta["active_incidents_count"] = len(active_incidents)
     meta["dispatches"] = global_incident_store.get_dispatches()
+    meta["active_alerts"] = global_incident_store.get_alerts()
     
     return meta
 
@@ -163,10 +165,9 @@ def gen_mjpeg_frames(camera_id: str):
     worker = global_camera_manager.get_worker(camera_id) or global_camera_manager.get_active_worker()
     while True:
         if worker:
-            rgb_frame, _ = worker.get_frame_and_meta()
-            if rgb_frame is not None:
-                bgr_frame = cv2.cvtColor(rgb_frame, cv2.COLOR_RGB2BGR)
-                ret, buffer = cv2.imencode('.jpg', bgr_frame, [int(cv2.IMWRITE_JPEG_QUALITY), 80])
+            frame, _ = worker.get_frame_and_meta()
+            if frame is not None:
+                ret, buffer = cv2.imencode('.jpg', frame, [int(cv2.IMWRITE_JPEG_QUALITY), 85])
                 if ret:
                     frame_bytes = buffer.tobytes()
                     yield (b'--frame\r\n'
@@ -280,9 +281,29 @@ def get_model_comparison():
 def get_dispatches():
     return global_incident_store.get_dispatches()
 
+# 4. Authority Alerts Endpoints
+@app.get("/api/alerts")
+def get_alerts():
+    alerts = global_incident_store.get_alerts()
+    if not alerts:
+        # Check active camera worker final_result if any
+        worker = global_camera_manager.get_active_worker()
+        if worker and worker.final_result and str(worker.final_result.get("type", "")).upper() != "MONITORING":
+            alert = global_incident_store.generate_or_update_alert(worker.final_result)
+            return [alert]
+    return alerts
+
+@app.post("/api/alerts/{alert_id}/acknowledge")
+def acknowledge_alert(alert_id: str):
+    res = global_incident_store.acknowledge_alert(alert_id)
+    if not res:
+        raise HTTPException(status_code=404, detail="Alert ID not found")
+    return {"status": "success", "alert": res}
+
 # 5. Footage Discovery & Selection Endpoints
 class FootageSelectPayload(BaseModel):
-    footage_id: int
+    footage_id: Optional[Any] = None
+    filename: Optional[str] = None
 
 @app.get("/api/footage")
 def list_footage():
@@ -290,23 +311,45 @@ def list_footage():
     Return PostgreSQL-backed or local video metadata for the selector.
     """
     records = footage_store.list_footage()
-    return {"footage": [
-        {"id": record["id"], "filename": record["filename"],
-         "display_name": record["display_name"], "size_mb": float(record["size_mb"] or 0)}
-        for record in records
-    ]}
+    # De-duplicate by unique filename display if needed, or preserve clean list
+    seen = set()
+    cleaned = []
+    for record in records:
+        fname = record["filename"]
+        # Prefer normalized clean entries
+        if fname in seen:
+            continue
+        seen.add(fname)
+        cleaned.append({
+            "id": record["id"],
+            "filename": record["filename"],
+            "display_name": record["display_name"],
+            "size_mb": float(record["size_mb"] or 0)
+        })
+    return {"footage": cleaned}
 
 @app.post("/api/footage/select")
 def select_footage(payload: FootageSelectPayload):
     """
     Resolve selected footage and swap on active CameraWorker.
     """
-    footage = footage_store.get_footage_by_id(payload.footage_id)
-    if footage is None:
-        raise HTTPException(status_code=404, detail="Footage record not found.")
+    target = payload.footage_id if payload.footage_id is not None else payload.filename
+    if target is None:
+        raise HTTPException(status_code=400, detail="Either footage_id or filename is required.")
+
+    footage = footage_store.get_footage_by_id(target)
+    if footage is not None:
+        storage_key = footage["storage_key"]
+        res_id = footage["id"]
+        res_filename = footage["filename"]
+    else:
+        # Fallback to direct resolution of string target
+        storage_key = str(target)
+        res_id = 0
+        res_filename = Path(str(target)).name
 
     try:
-        resolved = resolve_storage_key(footage["storage_key"])
+        resolved = resolve_storage_key(storage_key)
     except (EnvironmentError, FileNotFoundError, RuntimeError, ValueError) as exc:
         raise HTTPException(status_code=502, detail=f"Could not retrieve footage from storage: {exc}") from exc
 
@@ -316,8 +359,8 @@ def select_footage(payload: FootageSelectPayload):
 
     return {
         "status": "success",
-        "footage_id": footage["id"],
-        "filename": footage["filename"],
+        "footage_id": res_id,
+        "filename": res_filename,
         "active_camera_id": global_camera_manager.get_active_camera_id(),
     }
 

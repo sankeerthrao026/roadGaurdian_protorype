@@ -36,6 +36,24 @@ export interface Telemetry {
   final_result?: Incident | null;
   active_incidents_count?: number;
   dispatches?: Dispatch[];
+  active_alerts?: AuthorityAlert[];
+}
+
+export interface AuthorityAlert {
+  alert_id: string;
+  incident_id: string;
+  incident_type: string;
+  severity_label: "Low" | "Medium" | "High" | "Critical";
+  severity_score: number;
+  camera_id: string;
+  road_name: string;
+  location?: { lat?: number; lon?: number; name?: string; road_name?: string };
+  timestamp: string;
+  authorities: string[];
+  status: "GENERATED" | "ACKNOWLEDGED" | "RESOLVED";
+  badge: string;
+  created_at: string;
+  acknowledged_at?: string | null;
 }
 
 export interface IncidentFeatures {

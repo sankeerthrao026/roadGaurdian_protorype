@@ -20,46 +20,62 @@ export const DigitalTwinMap: React.FC<DigitalTwinMapProps> = ({
   const lonStr = `${Math.abs(lon).toFixed(4)}° ${lon >= 0 ? 'E' : 'W'}`;
 
   return (
-    <div className="bg-[#141517] border border-[#394047] rounded-md flex flex-col h-full">
-      <div className="bg-[#1B1D20] border-b border-[#394047] px-4 py-2.5 flex justify-between items-center font-mono text-xs font-bold text-[#C98255] uppercase">
-        <div className="flex items-center gap-2">
-          <Navigation className="w-4 h-4 text-[#C98255]" />
-          <span>DIGITAL TWIN GIS MONITOR</span>
+    <div className="bg-[var(--bg-surface)] border border-[var(--border-color)] flex flex-col">
+      
+      {/* Editorial Header */}
+      <div className="border-b border-[var(--border-color)] px-5 py-3 flex justify-between items-center font-mono text-xs">
+        <div className="flex items-center gap-2 font-bold tracking-widest uppercase text-[var(--text-primary)]">
+          <Navigation className="w-4 h-4 text-[var(--text-primary)]" strokeWidth={1.5} />
+          <span>DIGITAL TWIN / GIS TELEMETRY</span>
         </div>
-        <span className="flex items-center gap-1 text-[10px] text-[#55C98A]">
+        <span className="flex items-center gap-1.5 text-[10px] text-[var(--accent-success)] font-bold uppercase tracking-wider">
           <Radio className="w-3 h-3 animate-pulse" /> LIVE TELEMETRY
         </span>
       </div>
 
-      <div className="p-4 font-mono text-xs text-[#999EA5] space-y-3">
-        <div className="bg-[#0D0E10] border border-[#394047] p-3 rounded flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <MapPin className="w-4 h-4 text-[#C98255]" />
+      <div className="p-4 font-mono text-xs text-[var(--text-secondary)] space-y-3">
+        
+        {/* Node Metadata Matrix */}
+        <div className="bg-[var(--bg-subtle)] border border-[var(--border-color)] p-3 flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center gap-2.5">
+            <MapPin className="w-4 h-4 text-[var(--text-muted)] shrink-0" strokeWidth={1.5} />
             <div>
-              <div className="text-[10px] text-[#798690]">CAMERA NODE</div>
-              <div className="text-[#D4D9DF] font-bold">{cameraId} — {roadName}</div>
+              <div className="text-[9px] uppercase tracking-wider text-[var(--text-muted)]">Active Camera Node</div>
+              <div className="text-[var(--text-primary)] font-bold">{cameraId} — {roadName}</div>
             </div>
           </div>
-          <span className="text-[10px] bg-[#1B1D20] border border-[#394047] px-2 py-1 rounded text-[#D4D9DF]">
+          <div className="text-[10px] bg-[var(--bg-surface)] border border-[var(--border-color)] px-2.5 py-1 text-[var(--text-primary)] font-bold">
             GPS: {latStr}, {lonStr}
-          </span>
+          </div>
         </div>
 
-        {/* Tactical Simulated GIS Radar Display */}
-        <div className="relative bg-[#090A0C] border border-[#394047] rounded h-32 flex items-center justify-center overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(#394047_1px,transparent_1px)] [background-size:16px_16px] opacity-30" />
-          <div className="w-24 h-24 rounded-full border border-[#394047] flex items-center justify-center relative">
-            <div className="w-14 h-14 rounded-full border border-[#C98255]/40 animate-ping" />
-            <div className="w-2.5 h-2.5 rounded-full bg-[#C98255] absolute shadow-[0_0_8px_#C98255]" />
+        {/* Technical GIS Corridor Visualization */}
+        <div className="relative bg-[#080808] border border-[var(--border-color)] h-36 flex items-center justify-center overflow-hidden">
+          {/* Architectural Grid Background */}
+          <div
+            className="absolute inset-0 opacity-20"
+            style={{
+              backgroundImage: 'linear-gradient(#444 1px, transparent 1px), linear-gradient(90deg, #444 1px, transparent 1px)',
+              backgroundSize: '16px 16px',
+            }}
+          />
+          
+          {/* Radar Node Visualization */}
+          <div className="w-28 h-28 border border-[#333333] flex items-center justify-center relative">
+            <div className="w-16 h-16 border border-[#555555] animate-ping opacity-30" />
+            <div className="w-2 h-2 bg-white absolute" />
           </div>
-          <div className="absolute top-2 left-3 text-[10px] text-[#55C98A] flex items-center gap-1">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#55C98A]" />
-            NODE: {location?.name || roadName}
+
+          <div className="absolute top-2.5 left-3 text-[10px] font-mono text-[#4EAD6B] flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 bg-[#4EAD6B]" />
+            <span>NODE: {location?.name || roadName}</span>
           </div>
-          <div className="absolute bottom-2 left-3 text-[10px] text-[#798690]">
+
+          <div className="absolute bottom-2.5 left-3 text-[10px] font-mono text-[#888888] tracking-wider uppercase">
             CORRIDOR SENSORS ACTIVE {incidentLocation ? `• TARGET: ${incidentLocation}` : ''}
           </div>
         </div>
+
       </div>
     </div>
   );

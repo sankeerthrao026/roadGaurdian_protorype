@@ -38,12 +38,12 @@ interface DetailInspectorProps {
 type TabKey = 'overview' | 'severity' | 'dispatches' | 'report' | 'rag' | 'performance';
 
 const TABS: { key: TabKey; label: string; icon: React.ReactNode }[] = [
-  { key: 'overview',    label: 'OVERVIEW',       icon: <Shield className="w-3.5 h-3.5" /> },
-  { key: 'severity',   label: 'SEVERITY',        icon: <BarChart2 className="w-3.5 h-3.5" /> },
-  { key: 'dispatches', label: 'RESPONSE',        icon: <Siren className="w-3.5 h-3.5" /> },
-  { key: 'report',     label: 'FINAL REPORT',    icon: <FileText className="w-3.5 h-3.5" /> },
-  { key: 'rag',        label: 'RAG CONTEXT',     icon: <Database className="w-3.5 h-3.5" /> },
-  { key: 'performance',label: 'PERFORMANCE',     icon: <Cpu className="w-3.5 h-3.5" /> },
+  { key: 'overview',     label: 'OVERVIEW',       icon: <Shield className="w-3.5 h-3.5" strokeWidth={1.5} /> },
+  { key: 'severity',    label: 'SEVERITY & SHAP',icon: <BarChart2 className="w-3.5 h-3.5" strokeWidth={1.5} /> },
+  { key: 'dispatches',  label: 'RESPONSE',       icon: <Siren className="w-3.5 h-3.5" strokeWidth={1.5} /> },
+  { key: 'report',      label: 'FINAL REPORT',   icon: <FileText className="w-3.5 h-3.5" strokeWidth={1.5} /> },
+  { key: 'rag',         label: 'RAG CONTEXT',    icon: <Database className="w-3.5 h-3.5" strokeWidth={1.5} /> },
+  { key: 'performance', label: 'PERFORMANCE',    icon: <Cpu className="w-3.5 h-3.5" strokeWidth={1.5} /> },
 ];
 
 export const DetailInspector: React.FC<DetailInspectorProps> = ({
@@ -62,38 +62,47 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<TabKey>('overview');
 
-  // ── State-aware empty state ──────────────────────────────────────────────────
+  // ── State-aware Empty State ──────────────────────────────────────────────────
   if (!incident) {
     return (
-      <div className="bg-[#141517] border border-[#394047] rounded-md p-6 font-mono text-xs">
+      <div className="bg-[var(--bg-surface)] border border-[var(--border-color)] p-8 font-mono text-xs">
         {processingState === 'FINAL_ANALYSIS' ? (
-          <div className="text-center space-y-3">
-            <Loader className="w-8 h-8 text-[#C98255] mx-auto animate-spin" />
-            <h3 className="text-sm font-bold text-[#D4D9DF]">FINAL ANALYSIS IN PROGRESS</h3>
-            <p className="text-[#798690] max-w-lg mx-auto leading-relaxed">
-              Executing ML severity scoring → SHAP attribution → RAG context recall → LangGraph Agentic AI → Emergency dispatch → Report generation.
+          <div className="text-center space-y-4 max-w-xl mx-auto">
+            <Loader className="w-8 h-8 text-[var(--text-primary)] mx-auto animate-spin" strokeWidth={1.5} />
+            <h3 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider">
+              FINAL ANALYSIS PIPELINE IN PROGRESS
+            </h3>
+            <p className="text-[var(--text-muted)] leading-relaxed font-sans text-xs">
+              Orchestrating XGBoost severity regression → SHAP attribution → ChromaDB RAG recall → LangGraph multi-agent synthesis → Emergency response dispatch.
             </p>
-            <div className="flex justify-center gap-6 mt-3 text-[10px] text-[#798690]">
-              {['XGBoost Severity', 'SHAP Explainability', 'ChromaDB RAG', 'LangGraph Agent', 'Dispatch', 'Report'].map((step) => (
-                <div key={step} className="flex items-center gap-1">
-                  <Loader className="w-3 h-3 animate-spin text-[#C98255]" /> {step}
-                </div>
+            <div className="flex flex-wrap justify-center gap-3 pt-2 text-[10px] text-[var(--text-muted)]">
+              {['XGBoost Severity', 'SHAP Attribution', 'ChromaDB RAG', 'LangGraph Synthesis', 'Dispatch Matrix', 'Dossier Generation'].map((step) => (
+                <span key={step} className="px-2 py-1 border border-[var(--border-color)] bg-[var(--bg-subtle)] flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[var(--accent-warning)] animate-ping" />
+                  {step}
+                </span>
               ))}
             </div>
           </div>
         ) : processingState === 'ANALYZING' ? (
-          <div className="text-center space-y-2">
-            <AlertCircle className="w-8 h-8 text-[#394047] mx-auto" />
-            <h3 className="text-sm font-bold text-[#D4D9DF]">MONITORING CCTV FEED</h3>
-            <p className="text-[#798690] max-w-lg mx-auto leading-relaxed">
-              YOLOv8 + ByteTrack active. Final incident classification, ML severity scoring, SHAP, RAG recall, LangGraph agent, and emergency dispatch will trigger upon video completion.
+          <div className="text-center space-y-3 max-w-lg mx-auto">
+            <AlertCircle className="w-8 h-8 text-[var(--text-muted)] mx-auto" strokeWidth={1.5} />
+            <h3 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider">
+              HIGHWAY CCTV MONITORING ACTIVE
+            </h3>
+            <p className="text-[var(--text-muted)] leading-relaxed font-sans text-xs">
+              YOLOv8 vehicle detection &amp; ByteTrack trajectory tracking running in real-time. Comprehensive incident dossier and severity models will engage upon detected anomaly.
             </p>
           </div>
         ) : (
           <div className="text-center space-y-2">
-            <CheckCircle className="w-8 h-8 text-[#55C98A] mx-auto" />
-            <h3 className="text-sm font-bold text-[#D4D9DF]">NO INCIDENT DETECTED</h3>
-            <p className="text-[#798690]">All pipeline stages completed. No incident was classified above threshold.</p>
+            <CheckCircle className="w-8 h-8 text-[var(--accent-success)] mx-auto" strokeWidth={1.5} />
+            <h3 className="text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider">
+              NO INCIDENT CLASSIFIED
+            </h3>
+            <p className="text-[var(--text-muted)] font-sans text-xs">
+              All pipeline stages completed. Monitored video frames are below threshold.
+            </p>
           </div>
         )}
       </div>
@@ -102,10 +111,6 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
 
   const inc = incident;
   const shapEntries = Object.entries(inc.shap_values ?? {});
-  const incIcon =
-    inc.type?.toLowerCase().includes('fire') ? '🔥' :
-    inc.type?.toLowerCase().includes('rollover') ? '🔄' :
-    inc.type?.toLowerCase().includes('collision') ? '💥' : '🛑';
 
   // Dispatches matched to this incident
   const matchedDispatches = dispatches.filter(
@@ -113,236 +118,280 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
   );
 
   return (
-    <div className="bg-[#141517] border border-[#394047] rounded-md flex flex-col">
-      {/* ── COMPLETE Banner ──────────────────────────────────────────────────── */}
-      {processingState === 'COMPLETE' && (
-        <div className="bg-[#141A16] border-b border-[#55C98A]/30 px-4 py-2 flex items-center gap-2 font-mono text-xs font-bold text-[#55C98A]">
-          <CheckCircle className="w-4 h-4" />
-          FINAL ANALYSIS COMPLETE — {inc.type?.toUpperCase()} | Severity {inc.severity_score}/100 | {inc.incident_id}
-        </div>
-      )}
+    <div className="bg-[var(--bg-surface)] border border-[var(--border-color)] flex flex-col">
+      
+      {/* Editorial Incident Hero Header */}
+      <div className="p-6 md:p-8 border-b border-[var(--border-color)] bg-[var(--bg-surface)]">
+        
+        {/* Status Line */}
+        <div className="flex items-center justify-between gap-4 flex-wrap mb-3 font-mono text-xs">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[var(--accent-success)]" />
+            <span className="font-bold tracking-widest uppercase text-[var(--text-primary)]">
+              {processingState === 'COMPLETE' ? 'FINAL ANALYSIS COMPLETE' : 'INCIDENT CONFIRMED'}
+            </span>
+            <span className="text-[var(--border-color)]">|</span>
+            <span className="text-[var(--text-muted)]">ID: {inc.incident_id}</span>
+          </div>
 
-      {/* ── Tab Bar ──────────────────────────────────────────────────────────── */}
-      <div className="bg-[#1B1D20] border-b border-[#394047] px-4 py-2 flex flex-wrap gap-1 overflow-x-auto">
+          <span
+            className={`px-2.5 py-1 border font-bold uppercase tracking-wider text-[11px] ${
+              inc.severity_label?.toLowerCase() === 'critical' || inc.severity_label?.toLowerCase() === 'high'
+                ? 'text-[var(--accent-emergency)] border-[var(--accent-emergency)] bg-[var(--accent-emergency-bg)]'
+                : 'text-[var(--accent-warning)] border-[var(--accent-warning)] bg-[var(--accent-warning-bg)]'
+            }`}
+          >
+            {inc.severity_label?.toUpperCase()} SEVERITY • {inc.severity_score}/100
+          </span>
+        </div>
+
+        {/* Large Editorial Title */}
+        <div className="flex items-baseline gap-3 flex-wrap">
+          <span className="font-serif italic font-semibold text-3xl md:text-4xl text-[var(--text-primary)] capitalize">
+            {inc.type?.toLowerCase()}
+          </span>
+          <span className="font-sans font-bold text-xl md:text-2xl tracking-wider uppercase text-[var(--text-primary)]">
+            Accident Dossier
+          </span>
+        </div>
+
+        {/* Technical Sub-metadata */}
+        <div className="flex items-center gap-6 mt-3 pt-3 border-t border-[var(--border-color)] font-mono text-xs text-[var(--text-muted)] flex-wrap">
+          <div>
+            CAMERA: <strong className="text-[var(--text-primary)]">{inc.camera_id}</strong>
+          </div>
+          <div>
+            LOCATION: <strong className="text-[var(--text-primary)]">{inc.location?.road_name || 'Highway Corridor'}</strong>
+          </div>
+          <div>
+            TIMESTAMP: <strong className="text-[var(--text-primary)]">{inc.timestamp || '2026-10-07 11:08:05'}</strong>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Editorial Tab Bar */}
+      <div className="bg-[var(--bg-subtle)] border-b border-[var(--border-color)] px-4 py-1.5 flex flex-wrap gap-1">
         {TABS.map(({ key, label, icon }) => (
           <button
             key={key}
             onClick={() => setActiveTab(key)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 font-mono text-xs font-semibold rounded border transition cursor-pointer ${
+            className={`flex items-center gap-1.5 px-3 py-2 font-mono text-xs font-semibold uppercase tracking-wider border transition cursor-pointer ${
               activeTab === key
-                ? 'bg-[#141517] border-[#C98255] text-[#C98255]'
-                : 'border-transparent text-[#798690] hover:text-[#D4D9DF] hover:border-[#394047]'
+                ? 'bg-[var(--bg-surface)] border-[var(--border-color)] text-[var(--text-primary)] font-bold shadow-sm'
+                : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-primary)] hover:border-[var(--border-color)]'
             }`}
           >
-            {icon} {label}
+            {icon}
+            <span>{label}</span>
           </button>
         ))}
       </div>
 
-      {/* ── Tab Content ──────────────────────────────────────────────────────── */}
-      <div className="p-4">
+      {/* Tab Content Container */}
+      <div className="p-6">
 
-        {/* OVERVIEW ─────────────────────────────────────────────────────────── */}
+        {/* TAB 1: OVERVIEW ─────────────────────────────────────────────────── */}
         {activeTab === 'overview' && (
-          <div className="space-y-4">
-            {/* Incident Confirmation Card */}
-            <div className="bg-[#0D0E10] border border-[#394047] border-l-4 border-l-[#C98255] rounded p-4">
-              <div className="flex justify-between items-start mb-2 flex-wrap gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-lg">{incIcon}</span>
-                  <span className="font-sans font-bold text-base text-[#D4D9DF]">
-                    INCIDENT CONFIRMED — {inc.type?.toUpperCase()}
-                  </span>
-                  <span className="font-mono text-[10px] text-[#999EA5] bg-[#141517] border border-[#394047] px-2 py-0.5 rounded">
-                    [{inc.incident_id}]
-                  </span>
-                </div>
-                <span
-                  className={`font-mono text-xs font-bold px-2 py-1 border rounded uppercase ${
-                    inc.severity_label?.toLowerCase() === 'critical' || inc.severity_label?.toLowerCase() === 'high'
-                      ? 'text-[#D9534F] border-[#D9534F]/40 bg-[#1A1516]'
-                      : inc.severity_label?.toLowerCase() === 'medium'
-                      ? 'text-[#C98255] border-[#C98255]/40 bg-[#1B1714]'
-                      : 'text-[#55C98A] border-[#55C98A]/40 bg-[#141A16]'
-                  }`}
-                >
-                  {inc.severity_label?.toUpperCase()} ({inc.severity_score}/100)
-                </span>
-              </div>
-              <p className="font-mono text-xs text-[#999EA5]">
-                📍 <strong className="text-[#D4D9DF]">{inc.location?.road_name || 'Highway Corridor'}</strong> ({inc.camera_id})
-              </p>
-            </div>
-
-            {/* Feature Flags Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 font-mono text-xs">
+          <div className="space-y-6">
+            
+            {/* Editorial KPI Blocks */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono">
               {[
-                { icon: <Car className="w-4 h-4 text-[#C98255]" />, label: 'VEHICLES', value: String(inc.features?.vehicle_count ?? 0) },
-                { icon: <User className="w-4 h-4 text-[#55C98A]" />, label: 'PEDESTRIAN', value: inc.features?.person_on_road ? 'YES' : 'NO', alert: inc.features?.person_on_road },
-                { icon: <Flame className="w-4 h-4 text-[#D9534F]" />, label: 'FIRE / SMOKE', value: inc.features?.fire_smoke ? 'YES' : 'NO', alert: inc.features?.fire_smoke },
-                { icon: <RotateCw className="w-4 h-4 text-[#C98255]" />, label: 'ROLLOVER', value: inc.features?.rollover ? 'YES' : 'NO', alert: inc.features?.rollover },
-              ].map(({ icon, label, value, alert }) => (
+                { label: 'VEHICLES INVOLVED', value: String(inc.features?.vehicle_count ?? 0), icon: <Car className="w-4 h-4 text-[var(--text-muted)]" strokeWidth={1.5} /> },
+                { label: 'PEDESTRIAN ON ROAD', value: inc.features?.person_on_road ? 'YES' : 'NO', alert: inc.features?.person_on_road, icon: <User className="w-4 h-4 text-[var(--text-muted)]" strokeWidth={1.5} /> },
+                { label: 'FIRE / SMOKE DETECTED', value: inc.features?.fire_smoke ? 'YES' : 'NO', alert: inc.features?.fire_smoke, icon: <Flame className="w-4 h-4 text-[var(--text-muted)]" strokeWidth={1.5} /> },
+                { label: 'ROLLOVER GEOMETRY', value: inc.features?.rollover ? 'YES' : 'NO', alert: inc.features?.rollover, icon: <RotateCw className="w-4 h-4 text-[var(--text-muted)]" strokeWidth={1.5} /> },
+              ].map(({ label, value, alert, icon }) => (
                 <div
                   key={label}
-                  className={`bg-[#0D0E10] border rounded p-3 flex items-center gap-2 ${alert ? 'border-[#D9534F]/40' : 'border-[#394047]'}`}
+                  className={`p-4 border bg-[var(--bg-surface)] flex flex-col justify-between ${
+                    alert
+                      ? 'border-[var(--accent-emergency)] bg-[var(--accent-emergency-bg)]'
+                      : 'border-[var(--border-color)]'
+                  }`}
                 >
-                  {icon}
-                  <div>
-                    <div className="text-[10px] text-[#798690]">{label}</div>
-                    <div className={`font-bold ${alert ? 'text-[#D9534F]' : 'text-[#D4D9DF]'}`}>{value}</div>
+                  <div className="flex items-center justify-between text-[10px] text-[var(--text-muted)] uppercase tracking-wider mb-2">
+                    <span>{label}</span>
+                    {icon}
+                  </div>
+                  <div className={`font-bold text-2xl ${alert ? 'text-[var(--accent-emergency)]' : 'text-[var(--text-primary)]'}`}>
+                    {value}
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* Evidence Timeline */}
+            {/* Evidence Summary & Timeline */}
             {inc.evidence && (
-              <div className="bg-[#0D0E10] border border-[#394047] p-4 rounded">
-                <h4 className="font-mono text-xs font-bold text-[#C98255] uppercase mb-2 flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5" /> EVIDENCE TIMELINE
-                </h4>
-                <p className="font-mono text-xs text-[#D4D9DF] mb-3">{inc.evidence.summary}</p>
+              <div className="border border-[var(--border-color)] p-5 bg-[var(--bg-subtle)] space-y-4 font-mono text-xs">
+                <div className="flex items-center gap-2 font-bold uppercase tracking-wider text-[var(--text-primary)] border-b border-[var(--border-color)] pb-2">
+                  <Clock className="w-4 h-4 text-[var(--text-primary)]" strokeWidth={1.5} />
+                  <span>CCTV EVIDENCE CHRONOLOGY</span>
+                </div>
+                
+                <p className="font-sans text-xs text-[var(--text-secondary)] leading-relaxed">
+                  {inc.evidence.summary}
+                </p>
+
                 {inc.evidence.timeline?.length > 0 && (
-                  <div className="space-y-1.5 pl-3 border-l-2 border-[#394047]">
+                  <div className="space-y-2 pl-4 border-l-2 border-[var(--text-primary)] pt-1">
                     {inc.evidence.timeline.map((ev, idx) => (
-                      <div key={idx} className="font-mono text-xs text-[#999EA5] flex items-start gap-2">
-                        <span className="text-[#C98255] font-bold shrink-0">{ev.timestamp}</span>
-                        <span>— {ev.event}</span>
+                      <div key={idx} className="flex items-baseline gap-3 text-xs">
+                        <span className="font-bold text-[var(--text-primary)] shrink-0">{ev.timestamp}</span>
+                        <span className="text-[var(--text-secondary)] font-sans">— {ev.event}</span>
                       </div>
                     ))}
                   </div>
                 )}
               </div>
             )}
+
           </div>
         )}
 
-        {/* SEVERITY & SHAP ─────────────────────────────────────────────────── */}
+        {/* TAB 2: SEVERITY & SHAP ───────────────────────────────────────────── */}
         {activeTab === 'severity' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Severity Gauge */}
-            <div className="bg-[#0D0E10] border border-[#394047] rounded p-4 flex flex-col items-center gap-4">
-              <div className="font-mono text-[10px] font-bold text-[#999EA5] uppercase tracking-wider self-start">ML Severity Score</div>
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-start">
+            
+            {/* Left: Severity Gauge (5 cols) */}
+            <div className="md:col-span-5 border border-[var(--border-color)] p-6 bg-[var(--bg-subtle)] flex flex-col items-center justify-center gap-4">
+              <div className="font-mono text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-widest self-start">
+                SEVERITY REGRESSION GAUGE
+              </div>
               <SeverityGauge score={inc.severity_score} label={inc.severity_label ?? 'High'} />
-              <div className="text-xs font-mono text-[#798690] text-center">
-                XGBoost Regression Model • Trained on Historical Incident Data
+              <div className="text-[11px] font-mono text-[var(--text-muted)] text-center leading-relaxed">
+                Trained XGBoost Severity Model • Calibrated against Federal DOT incident datasets
               </div>
             </div>
 
-            {/* SHAP Chart */}
-            <div className="bg-[#0D0E10] border border-[#394047] rounded p-4">
+            {/* Right: SHAP Feature Attribution (7 cols) */}
+            <div className="md:col-span-7 border border-[var(--border-color)] p-6 bg-[var(--bg-surface)]">
               {shapEntries.length > 0 ? (
                 <ShapChart shapValues={inc.shap_values!} />
               ) : (
-                <div className="text-xs font-mono text-[#798690] text-center mt-8">SHAP values not available</div>
+                <div className="text-xs font-mono text-[var(--text-muted)] text-center py-8">
+                  SHAP feature attribution not available for this incident.
+                </div>
               )}
             </div>
+
           </div>
         )}
 
-        {/* EMERGENCY RESPONSE ──────────────────────────────────────────────── */}
+        {/* TAB 3: RESPONSE MATRIX ─────────────────────────────────────────── */}
         {activeTab === 'dispatches' && (
           <div className="space-y-3 font-mono text-xs">
             {matchedDispatches.length === 0 ? (
-              <div className="text-center text-[#798690] py-6">
-                <Siren className="w-6 h-6 mx-auto mb-2 text-[#394047]" />
-                <p>No dispatch records yet.</p>
+              <div className="text-center text-[var(--text-muted)] py-8 border border-[var(--border-color)] bg-[var(--bg-subtle)]">
+                <Siren className="w-6 h-6 mx-auto mb-2 text-[var(--text-muted)]" strokeWidth={1.5} />
+                <p className="font-bold uppercase tracking-wider text-[var(--text-primary)]">NO DISPATCH RECORDS</p>
+                <p className="text-[11px] font-sans mt-1">Simulated emergency dispatches will populate when threshold is reached.</p>
               </div>
             ) : (
               matchedDispatches.map((d, idx) => (
                 <div
                   key={idx}
-                  className="bg-[#0D0E10] border border-[#394047] border-l-4 border-l-[#C98255] p-3.5 rounded"
+                  className="border border-[var(--border-color)] border-l-4 border-l-[var(--text-primary)] p-4 bg-[var(--bg-subtle)]"
                 >
-                  <div className="flex justify-between items-center mb-1 flex-wrap gap-2">
-                    <span className="font-bold text-[#D4D9DF] text-sm">{d.service}</span>
-                    <span className="px-2 py-0.5 bg-[#1B1714] text-[#C98255] border border-[#C98255]/30 rounded text-[10px] font-bold uppercase">
+                  <div className="flex justify-between items-center mb-1.5 flex-wrap gap-2">
+                    <span className="font-bold text-[var(--text-primary)] text-sm font-sans">{d.service}</span>
+                    <span className="px-2 py-0.5 border border-[var(--border-color)] bg-[var(--bg-surface)] text-[var(--text-muted)] text-[10px] font-bold uppercase tracking-wider">
                       {d.badge || 'SIMULATED DISPATCH'}
                     </span>
                   </div>
-                  <p className="text-[#999EA5] leading-relaxed">{d.message}</p>
+                  <p className="font-sans text-xs text-[var(--text-secondary)] leading-relaxed">{d.message}</p>
                 </div>
               ))
             )}
           </div>
         )}
 
-        {/* FINAL REPORT ───────────────────────────────────────────────────── */}
+        {/* TAB 4: FINAL REPORT ────────────────────────────────────────────── */}
         {activeTab === 'report' && (
           <div
-            className="bg-[#0D0E10] border border-[#394047] border-t-2 border-t-[#C98255] rounded p-4 font-mono text-xs text-[#D4D9DF] whitespace-pre-wrap leading-relaxed overflow-y-auto"
-            style={{ maxHeight: '420px' }}
+            className="border border-[var(--border-color)] p-6 bg-[var(--bg-subtle)] font-mono text-xs text-[var(--text-primary)] whitespace-pre-wrap leading-relaxed overflow-y-auto max-h-[460px]"
           >
-            {inc.report_text || 'GenAI structured incident report will appear here after final analysis.'}
+            {inc.report_text || 'GenAI structured incident report will appear here upon completion of multi-agent synthesis.'}
           </div>
         )}
 
-        {/* RAG CONTEXT ────────────────────────────────────────────────────── */}
+        {/* TAB 5: RAG CONTEXT ─────────────────────────────────────────────── */}
         {activeTab === 'rag' && (
-          <div className="space-y-3 font-mono text-xs">
+          <div className="space-y-4 font-mono text-xs">
             {!inc.similar_incidents || inc.similar_incidents.length === 0 ? (
-              <div className="text-center text-[#798690] py-6">
-                <Database className="w-6 h-6 mx-auto mb-2 text-[#394047]" />
-                <p>ChromaDB RAG context not available for this incident.</p>
+              <div className="text-center text-[var(--text-muted)] py-8 border border-[var(--border-color)] bg-[var(--bg-subtle)]">
+                <Database className="w-6 h-6 mx-auto mb-2 text-[var(--text-muted)]" strokeWidth={1.5} />
+                <p className="font-bold uppercase tracking-wider text-[var(--text-primary)]">NO RAG CONTEXT</p>
+                <p className="text-[11px] font-sans mt-1">ChromaDB semantic retrieval records will appear upon query.</p>
               </div>
             ) : (
               inc.similar_incidents.map((sim) => (
-                <div key={sim.incident_id} className="bg-[#0D0E10] border border-[#394047] p-3.5 rounded">
-                  <div className="flex justify-between font-bold text-[#C98255] mb-1 flex-wrap gap-1">
-                    <span>#{sim.incident_id} — {sim.type?.toUpperCase()}</span>
-                    <span className="text-[#999EA5] font-normal">
+                <div key={sim.incident_id} className="border border-[var(--border-color)] p-4 bg-[var(--bg-surface)] space-y-2">
+                  <div className="flex justify-between font-bold text-[var(--text-primary)] flex-wrap gap-2">
+                    <span className="uppercase tracking-wider">REF #{sim.incident_id} — {sim.type?.toUpperCase()}</span>
+                    <span className="text-[var(--text-muted)] font-normal">
                       Severity: {sim.severity} ({sim.severity_score}/100)
                     </span>
                   </div>
-                  <div className="text-[11px] text-[#798690] mb-2">📍 {sim.location} | {sim.timestamp}</div>
-                  <p className="text-[#D4D9DF] leading-relaxed">{sim.summary}</p>
+                  <div className="text-[11px] text-[var(--text-muted)]">
+                    LOCATION: {sim.location} | TIMESTAMP: {sim.timestamp}
+                  </div>
+                  <p className="font-sans text-xs text-[var(--text-secondary)] leading-relaxed pt-1 border-t border-[var(--border-color)]">
+                    {sim.summary}
+                  </p>
                 </div>
               ))
             )}
           </div>
         )}
 
-        {/* PERFORMANCE & MLFLOW ────────────────────────────────────────────── */}
+        {/* TAB 6: PERFORMANCE & MLFLOW ────────────────────────────────────── */}
         {activeTab === 'performance' && (
-          <div className="space-y-4 font-mono text-xs">
-            {/* System Benchmarks */}
-            <div className="bg-[#0D0E10] border border-[#394047] rounded p-4">
-              <div className="text-[#C98255] font-bold uppercase mb-3 text-[10px] tracking-wider">System Benchmarks</div>
+          <div className="space-y-6 font-mono text-xs">
+            
+            {/* System Performance Matrix */}
+            <div className="border border-[var(--border-color)] p-5 bg-[var(--bg-subtle)]">
+              <div className="font-bold uppercase tracking-widest text-[var(--text-primary)] mb-3 text-[10px]">
+                SYSTEM BENCHMARK INSTRUMENTATION
+              </div>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                 {[
-                  { label: 'Video Duration',    value: `${videoDuration ?? 0}s` },
-                  { label: 'Processing Time',   value: `${processingDuration ?? 0}s` },
-                  { label: 'Inference FPS',     value: `${aiFps ?? 0} FPS`, highlight: true },
-                  { label: 'Display FPS',       value: `${displayFps ?? 0} FPS`, highlight: true },
-                  { label: 'Frames Inferred',   value: String(framesProcessed ?? 0) },
-                  { label: 'Frames Skipped',    value: String(framesSkipped ?? 0) },
-                  { label: 'Total Frames',      value: String(totalFrames ?? 0) },
-                  { label: 'Video FPS',         value: String(videoFps ?? 0) },
-                  { label: 'Engine',            value: 'YOLOv8n + ByteTrack' },
+                  { label: 'VIDEO DURATION',    value: `${videoDuration ?? 0}s` },
+                  { label: 'PROCESSING TIME',   value: `${processingDuration ?? 0}s` },
+                  { label: 'INFERENCE FPS',     value: `${aiFps ?? 0} FPS`, highlight: true },
+                  { label: 'DISPLAY FPS',       value: `${displayFps ?? 0} FPS`, highlight: true },
+                  { label: 'FRAMES INFERRED',   value: String(framesProcessed ?? 0) },
+                  { label: 'FRAMES SKIPPED',    value: String(framesSkipped ?? 0) },
+                  { label: 'TOTAL FRAMES',      value: String(totalFrames ?? 0) },
+                  { label: 'VIDEO FPS',         value: String(videoFps ?? 0) },
+                  { label: 'VISION ENGINE',     value: 'YOLOv8n + ByteTrack' },
                 ].map(({ label, value, highlight }) => (
-                  <div key={label} className="bg-[#141517] border border-[#394047] rounded p-2.5">
-                    <div className="text-[10px] text-[#798690] mb-0.5">{label}</div>
-                    <div className={`font-bold ${highlight ? 'text-[#C98255]' : 'text-[#D4D9DF]'}`}>{value}</div>
+                  <div key={label} className="bg-[var(--bg-surface)] border border-[var(--border-color)] p-3">
+                    <div className="text-[9px] uppercase tracking-wider text-[var(--text-muted)] mb-1">{label}</div>
+                    <div className={`font-bold text-sm ${highlight ? 'text-[var(--accent-warning)]' : 'text-[var(--text-primary)]'}`}>
+                      {value}
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* MLflow Model Comparison */}
+            {/* MLflow Model Comparison Table */}
             {modelComparison && (
-              <div className="bg-[#0D0E10] border border-[#394047] rounded p-4">
+              <div className="border border-[var(--border-color)] p-5 bg-[var(--bg-surface)]">
                 <div className="flex items-center gap-2 mb-3">
-                  <Trophy className="w-4 h-4 text-[#55C98A]" />
-                  <span className="font-bold text-[#55C98A] text-[10px] uppercase tracking-wider">
-                    MLflow Winning Model: {modelComparison.winner}
+                  <Trophy className="w-4 h-4 text-[var(--accent-success)]" strokeWidth={1.5} />
+                  <span className="font-bold text-[var(--accent-success)] text-[10px] uppercase tracking-widest">
+                    MLFLOW CHAMPION MODEL: {modelComparison.winner}
                   </span>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-[11px]">
                     <thead>
-                      <tr className="border-b border-[#394047]">
-                        {['Model', 'R² Score', 'RMSE', 'Accuracy', 'F1'].map((h) => (
-                          <th key={h} className="text-left py-1.5 pr-4 text-[#798690] font-semibold">{h}</th>
+                      <tr className="border-b border-[var(--border-color)] text-[var(--text-muted)]">
+                        {['MODEL', 'R² SCORE', 'RMSE', 'ACCURACY', 'F1 WEIGHTED'].map((h) => (
+                          <th key={h} className="text-left py-2 pr-4 font-bold uppercase tracking-wider">{h}</th>
                         ))}
                       </tr>
                     </thead>
@@ -350,13 +399,13 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
                       {Object.entries(modelComparison.models).map(([name, m]) => (
                         <tr
                           key={name}
-                          className={`border-b border-[#1B1D20] ${name === modelComparison.winner ? 'text-[#55C98A]' : 'text-[#999EA5]'}`}
+                          className={`border-b border-[var(--border-color)] ${name === modelComparison.winner ? 'font-bold text-[var(--accent-success)]' : 'text-[var(--text-secondary)]'}`}
                         >
-                          <td className="py-1.5 pr-4 font-bold">{name}</td>
-                          <td className="py-1.5 pr-4">{m.r2_score?.toFixed(3)}</td>
-                          <td className="py-1.5 pr-4">{m.rmse?.toFixed(3)}</td>
-                          <td className="py-1.5 pr-4">{((m.accuracy ?? 0) * 100).toFixed(1)}%</td>
-                          <td className="py-1.5 pr-4">{m.f1_weighted?.toFixed(3)}</td>
+                          <td className="py-2 pr-4">{name}</td>
+                          <td className="py-2 pr-4">{m.r2_score?.toFixed(3)}</td>
+                          <td className="py-2 pr-4">{m.rmse?.toFixed(3)}</td>
+                          <td className="py-2 pr-4">{((m.accuracy ?? 0) * 100).toFixed(1)}%</td>
+                          <td className="py-2 pr-4">{m.f1_weighted?.toFixed(3)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -364,6 +413,7 @@ export const DetailInspector: React.FC<DetailInspectorProps> = ({
                 </div>
               </div>
             )}
+
           </div>
         )}
 

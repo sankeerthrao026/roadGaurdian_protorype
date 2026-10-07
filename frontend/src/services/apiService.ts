@@ -5,7 +5,8 @@ import type {
   Incident,
   Dispatch,
   ModelComparisonResponse,
-  RAGIncident
+  RAGIncident,
+  AuthorityAlert
 } from '../types';
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
@@ -72,8 +73,20 @@ export const apiService = {
     return res.data.footage ?? [];
   },
 
-  setCameraFootage: async (footageId: number): Promise<{ status: string; footage_id: number; filename: string }> => {
-    const res = await axios.post(`${API_BASE_URL}/api/footage/select`, { footage_id: footageId });
+  setCameraFootage: async (footageId: number | string): Promise<{ status: string; footage_id: number; filename: string }> => {
+    const payload = typeof footageId === 'number' ? { footage_id: footageId } : { filename: String(footageId) };
+    const res = await axios.post(`${API_BASE_URL}/api/footage/select`, payload);
+    return res.data;
+  },
+
+  // Authority Alerts
+  getAlerts: async (): Promise<AuthorityAlert[]> => {
+    const res = await axios.get(`${API_BASE_URL}/api/alerts`);
+    return res.data;
+  },
+
+  acknowledgeAlert: async (alertId: string): Promise<{ status: string; alert: AuthorityAlert }> => {
+    const res = await axios.post(`${API_BASE_URL}/api/alerts/${alertId}/acknowledge`);
     return res.data;
   },
 };

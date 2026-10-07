@@ -3,7 +3,7 @@
     "id": "CAM-01",
     "name": "Highway 101 Northbound, Rollover Zone",
     "source_type": "LOCAL_VIDEO",
-    "source_path": "car_accidents/car_rollover 2.mp4",
+    "source_path": "car_accidents/car_crash.mp4",
     "gps": {
       "name": "Highway 101 Northbound, Milepost 42",
       "lat": 47.6101,
